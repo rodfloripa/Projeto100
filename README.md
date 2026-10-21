@@ -189,7 +189,7 @@ python orchestrator.py
 
 <p align="justify">Registro de Modelos: acesse <strong>Amazon SageMaker &gt; Models &gt; Model Registry</strong> e consulte o grupo <code>titanic-model-group</code> para revisar a nova versão do modelo registrada com o status <code>PendingManualApproval</code>.</p>
 
----
+
 
 ## 7. Limpeza dos Recursos e Prevenção de Custos
 
