@@ -7,17 +7,17 @@ from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOut
 from sagemaker.estimator import Estimator
 from sagemaker.model import Model
 from sagemaker.workflow.pipeline_context import PipelineSession
+from sagemaker.model_monitor import DataCaptureConfig
 
 class SageMakerPipelineBuilder:
     def __init__(self, pipeline_name: str, model_group_name: str):
         self.pipeline_session = PipelineSession()
         
-        # Lê a Role de forma dinâmica por variável de ambiente (Sem valores fixos)
         self.role = os.getenv("SAGEMAKER_ROLE")
         if not self.role:
             raise ValueError(
                 "A variável de ambiente 'SAGEMAKER_ROLE' não está definida. "
-                "Defina-a no seu terminal antes de executar: export SAGEMAKER_ROLE='arn:aws:iam::...'"
+                "Execute: export SAGEMAKER_ROLE='arn:aws:iam::...'"
             )
 
         self.bucket = self.pipeline_session.default_bucket()
@@ -72,12 +72,23 @@ class SageMakerPipelineBuilder:
         )
 
     def build_register_step(self, train_step: TrainingStep) -> ModelStep:
+        # Configuração de captura de dados no S3 para análise de Data Drift e Concept Drift
+        data_capture_config = DataCaptureConfig(
+            enable_capture=True,
+            sampling_percentage=100,
+            destination_s3_uri=f"s3://{self.bucket}/datacapture",
+            capture_options=["REQUEST", "RESPONSE"],
+            csv_content_types=["text/csv"],
+            json_content_types=["application/json"]
+        )
+
         model = Model(
             image_uri=self.xgboost_image,
             model_data=train_step.properties.ModelArtifacts.S3ModelArtifacts,
             role=self.role,
             sagemaker_session=self.pipeline_session
         )
+
         return ModelStep(
             name="TitanicModelVersioningStep",
             step_args=model.register(
@@ -101,7 +112,7 @@ class SageMakerPipelineBuilder:
         
         pipeline.upsert(role_arn=self.role)
         pipeline.start()
-        print(f"Pipeline {self.pipeline_name} iniciado com sucesso.")
+        print(f"Pipeline {self.pipeline_name} iniciado com sucesso com Data Capture habilitado no S3.")
 
 if __name__ == "__main__":
     builder = SageMakerPipelineBuilder(
