@@ -3,7 +3,6 @@
 
 <p align="justify">Pipeline de Machine Learning robusto para o conjunto de dados Titanic, desenvolvido com princípios de Programação Orientada a Objetos (OOP), SOLID e padrões de projeto profissionais implementados por meio do AWS SageMaker Python SDK.</p>
 
----
 
 ## 2. Padrões Arquiteturais e de Projeto
 
@@ -19,7 +18,6 @@
 
 <p align="justify">5. Model Versioning (<code>orchestrator.py</code>): Registra os artefatos treinados diretamente no AWS SageMaker Model Registry, sob um grupo de pacotes de modelo.</p>
 
----
 
 ## 3. Estrutura do Projeto
 
@@ -34,13 +32,13 @@ Titanic/
 └── orchestrator.py         # Orquestração do pipeline de fluxo de trabalho
 ```
 
----
+
 
 ## 4. Pré-requisitos
 
 <p align="justify">É necessária uma conta ativa da AWS com permissões para o SageMaker, S3 e IAM. Também é preciso ter a AWS CLI instalada e configurada por meio do comando <code>aws configure</code>, além do Python 3.8 ou superior instalado localmente.</p>
 
----
+
 
 ## 5. Guia Passo a Passo para Implantação
 
@@ -78,7 +76,7 @@ aws sts get-caller-identity
 
 <p align="justify">Se o comando retornar o identificador da conta e o ARN da identidade, a configuração foi reconhecida. A AWS CLI precisa de credenciais válidas e permissões adequadas; o comando <code>aws configure</code> não concede permissões por si só.</p>
 
----
+
 
 ### 5.2. Clonar e navegar para o repositório
 
@@ -183,7 +181,7 @@ aws s3 cp data/titanic.csv s3://$(aws s3api list-buckets --query "Buckets[?start
 python orchestrator.py
 ```
 
----
+
 
 ## 6. Monitoramento e Validação
 
@@ -293,7 +291,7 @@ aws iam delete-role \
 
 <p align="justify">Por fim, consulte novamente os recursos no SageMaker e no S3. A limpeza deve ser feita com atenção: não exclua buckets, funções do IAM, modelos ou endpoints compartilhados por outros projetos. A AWS pode manter logs no CloudWatch e objetos em outros prefixos; verifique-os separadamente se desejar remover todos os vestígios do experimento.</p>
 
----
+
 
 ## 8. Análise de Conformidade com o SOLID
 
