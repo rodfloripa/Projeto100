@@ -1,5 +1,5 @@
 # Titanic com SOLID na AWS
-# 1. Objetivo
+## 1. Objetivo
 
 <p align="justify">Pipeline de Machine Learning robusto para o conjunto de dados Titanic, desenvolvido com princípios de Programação Orientada a Objetos (OOP), SOLID e padrões de projeto profissionais implementados por meio do AWS SageMaker Python SDK.</p>
 
