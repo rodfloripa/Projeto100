@@ -189,6 +189,17 @@ python orchestrator.py
 
 <p align="justify">Registro de Modelos: acesse <strong>Amazon SageMaker &gt; Models &gt; Model Registry</strong> e consulte o grupo <code>titanic-model-group</code> para revisar a nova versão do modelo registrada com o status <code>PendingManualApproval</code>.</p>
 
+### 6.5 Monitoramento de Drift
+
+<p align="justify"><strong>Captura em tempo real:</strong> Sempre que uma requisição for enviada para o Endpoint do modelo, o SageMaker salva automaticamente um payload no formato <code>.jsonl</code> em <code>s3://&lt;seu-bucket&gt;/datacapture/</code>.</p>
+
+<p align="justify"><strong>Estrutura dos dados salvos:</strong></p>
+
+* <code>captureData.endpointInput</code>: O dado de entrada bruto recebido na inferência (usado para verificar <strong>Data Drift</strong>).
+* <code>captureData.endpointOutput</code>: A predição retornada pelo modelo e os valores SHAP (usados para verificar <strong>Concept Drift</strong>).
+
+<p align="justify"><strong>Análise de Drift:</strong> Esses logs salvos no S3 servem de entrada direta para trabalhos agendados de monitoramento do SageMaker (<em>Model Monitor Schedule</em>) usando o SDK <code>DefaultModelMonitor</code> para comparar a distribuição dos dados de treino contra os dados em produção.</p>
+
 
 
 ## 7. Limpeza dos Recursos e Prevenção de Custos
