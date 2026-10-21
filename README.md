@@ -193,26 +193,128 @@ python orchestrator.py
 
 ---
 
-## 7. Análise de Conformidade com o SOLID
+## 7. Limpeza dos Recursos e Prevenção de Custos
+
+<p align="justify">Ao terminar os testes, remova os recursos que não serão mais utilizados. A execução do pipeline, os artefatos armazenados no Amazon S3, os modelos registrados e outros recursos criados podem permanecer na conta e gerar custos de armazenamento ou computação. Os comandos abaixo são exemplos: substitua os nomes pelos recursos realmente criados e confira cada recurso antes de excluí-lo.</p>
+
+### 7.1. Definir a região e consultar os recursos
+
+```bash
+export AWS_REGION="us-east-1"
+aws sts get-caller-identity
+aws sagemaker list-pipelines --region "$AWS_REGION"
+aws sagemaker list-model-package-groups --region "$AWS_REGION"
+aws s3 ls
+```
+
+### 7.2. Excluir o pipeline do SageMaker
+
+<p align="justify">Se o pipeline foi criado com o nome <code>titanic-pipeline</code>, exclua sua definição após confirmar que não será mais necessária. A exclusão da definição não apaga automaticamente todos os artefatos que as execuções tenham gravado no S3.</p>
+
+```bash
+aws sagemaker delete-pipeline \
+  --pipeline-name titanic-pipeline \
+  --region "$AWS_REGION"
+```
+
+### 7.3. Excluir o grupo de pacotes do Model Registry
+
+<p align="justify">Se o projeto criou o grupo <code>titanic-model-group</code>, liste os pacotes registrados e exclua primeiro cada pacote de modelo, caso existam. Use o comando de exclusão do grupo somente depois de remover seus pacotes. Confira os identificadores antes de executar os comandos.</p>
+
+```bash
+aws sagemaker list-model-packages \
+  --model-package-group-name titanic-model-group \
+  --region "$AWS_REGION"
+```
+
+<p align="justify">Para cada pacote que não precise mais ser mantido, substitua <code>VERSAO_DO_PACOTE</code> pelo número de versão retornado:</p>
+
+```bash
+aws sagemaker delete-model-package \
+  --model-package-arn "ARN_DO_PACOTE_DE_MODELO" \
+  --region "$AWS_REGION"
+```
+
+<p align="justify">Depois de remover todos os pacotes do grupo, exclua o grupo de pacotes:</p>
+
+```bash
+aws sagemaker delete-model-package-group \
+  --model-package-group-name titanic-model-group \
+  --region "$AWS_REGION"
+```
+
+### 7.4. Remover artefatos do Amazon S3
+
+<p align="justify">Identifique o bucket e o prefixo utilizados por este projeto. Primeiro, liste os objetos para confirmar que pertencem ao pipeline Titanic. O comando de remoção abaixo apaga permanentemente os objetos dentro do prefixo indicado; não o execute se houver dados de outros projetos nesse local.</p>
+
+```bash
+aws s3 ls "s3://NOME_DO_BUCKET/titanic/" --recursive
+aws s3 rm "s3://NOME_DO_BUCKET/titanic/" --recursive
+```
+
+<p align="justify">Os dados de entrada, os dados processados e os artefatos do treinamento podem estar em prefixos diferentes. Consulte também o bucket e os caminhos indicados nas saídas das execuções do SageMaker antes de apagar outros objetos. Não remova um bucket compartilhado inteiro apenas para limpar este projeto.</p>
+
+### 7.5. Verificar endpoints e modelos implantados
+
+<p align="justify">Se você criou endpoints de inferência durante os testes, eles podem continuar cobrando enquanto estiverem ativos. Liste os endpoints e exclua somente aqueles criados para este projeto. Excluir um endpoint não exclui automaticamente a configuração do endpoint nem o modelo correspondente.</p>
+
+```bash
+aws sagemaker list-endpoints --region "$AWS_REGION"
+```
+
+<p align="justify">Para cada endpoint do Titanic, substitua os nomes abaixo pelos valores reais. Exclua o endpoint antes de sua configuração e do modelo associado.</p>
+
+```bash
+aws sagemaker delete-endpoint \
+  --endpoint-name NOME_DO_ENDPOINT \
+  --region "$AWS_REGION"
+
+aws sagemaker delete-endpoint-config \
+  --endpoint-config-name NOME_DA_CONFIGURACAO \
+  --region "$AWS_REGION"
+
+aws sagemaker delete-model \
+  --model-name NOME_DO_MODELO \
+  --region "$AWS_REGION"
+```
+
+### 7.6. Remover a função do IAM criada exclusivamente para o projeto
+
+<p align="justify">Só execute esta etapa se a função <code>AmazonSageMaker-ExecutionRole-Titanic</code> tiver sido criada exclusivamente para este projeto e não for utilizada por outros recursos. Remova a política anexada antes de excluir a função.</p>
+
+```bash
+aws iam detach-role-policy \
+  --role-name AmazonSageMaker-ExecutionRole-Titanic \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+
+aws iam delete-role \
+  --role-name AmazonSageMaker-ExecutionRole-Titanic
+```
+
+<p align="justify">Por fim, consulte novamente os recursos no SageMaker e no S3. A limpeza deve ser feita com atenção: não exclua buckets, funções do IAM, modelos ou endpoints compartilhados por outros projetos. A AWS pode manter logs no CloudWatch e objetos em outros prefixos; verifique-os separadamente se desejar remover todos os vestígios do experimento.</p>
+
+---
+
+## 8. Análise de Conformidade com o SOLID
 
 <p align="justify">A estrutura orientada a objetos do projeto aplica os cinco princípios SOLID da seguinte forma:</p>
 
-### 7.1. S — Princípio da Responsabilidade Única
+### 8.1. S — Princípio da Responsabilidade Única
 
 <p align="justify">Cada arquivo e classe possui um único objetivo bem definido. O arquivo <code>preprocessing.py</code>, por meio da classe <code>TitanicDataTransformer</code>, trata apenas da transformação dos dados de entrada. O arquivo <code>train.py</code>, por meio da classe <code>ReproducibleTrainer</code>, cuida do ajuste do modelo e da reprodutibilidade. O arquivo <code>inference.py</code>, por meio da classe <code>InferenceService</code>, cuida da predição e das explicações SHAP. Por fim, o arquivo <code>orchestrator.py</code>, por meio da classe <code>SageMakerPipelineBuilder</code>, orquestra os recursos de infraestrutura na AWS.</p>
 
-### 7.2. O — Princípio Aberto/Fechado
+### 8.2. O — Princípio Aberto/Fechado
 
 <p align="justify">O código é aberto para expansão, mas fechado para modificação. Por exemplo, em <code>preprocessing.py</code>, para usar o código com outro conjunto de dados, como o Iris, não é necessário alterar a lógica de <code>ProcessingPipeline</code>. Basta criar uma nova subclasse de <code>DataTransformerInterface</code>, como <code>IrisDataTransformer</code>, e passá-la para o pipeline.</p>
 
-### 7.3. L — Princípio da Substituição de Liskov
+### 8.3. L — Princípio da Substituição de Liskov
 
 <p align="justify">Qualquer classe descendente de <code>DataTransformerInterface</code> garante a existência e o comportamento do método <code>fit_transform()</code>. A classe abstrata permite substituir qualquer transformador concreto sem quebrar a execução do pipeline.</p>
 
-### 7.4. I — Princípio da Segregação de Interfaces
+### 8.4. I — Princípio da Segregação de Interfaces
 
 <p align="justify">Os trabalhos isolados de processamento, treinamento e inferência não compartilham código desnecessário nem dependências que não utilizam. A função de inferência, em <code>inference.py</code>, não importa bibliotecas pesadas de treinamento, e o script de treinamento não importa o SHAP.</p>
 
-### 7.5. D — Princípio da Inversão de Dependência
+### 8.5. D — Princípio da Inversão de Dependência
 
 <p align="justify">As rotinas dependem de abstrações em vez de implementações concretas. O <code>ProcessingPipeline</code> depende da interface <code>DataTransformerInterface</code>, e não da classe concreta <code>TitanicDataTransformer</code>. Além disso, as etapas do SageMaker dependem de referências abstratas do S3, como <code>transform_step.properties...</code>, permitindo alterar caminhos e clusters sem modificar o código interno.</p>
